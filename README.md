@@ -1,6 +1,7 @@
 # Slayer Streak
 
-Displays your current Slayer task streak in an infobox.
+Displays your current Slayer task streak in an infobox. Optionally hides Slayer Masters other 
+than Konar every 10th, 50th, 100th, or 250th task (both in NPC contact and out). 
 
 ## Features
 

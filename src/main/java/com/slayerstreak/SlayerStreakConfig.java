@@ -9,11 +9,21 @@ public interface SlayerStreakConfig extends Config
 {
     @ConfigItem(
             keyName = "hideSlayerMasters",
-            name = "Hide masters before milestone",
-            description = "In the NPC Contact interface, hides every slayer master except Konar when you're one task from a 50th/100th streak milestone."
+            name = "Restrict masters before milestone",
+            description = "One task before your chosen milestone, removes Talk-to/Assignment from other slayer masters (Konar stays available) so you don't accidentally break your streak bonus."
     )
     default boolean hideSlayerMasters()
     {
         return true;
+    }
+
+    @ConfigItem(
+            keyName = "milestoneInterval",
+            name = "Milestone interval",
+            description = "Which streak milestone to protect."
+    )
+    default MilestoneInterval milestoneInterval()
+    {
+        return MilestoneInterval.EVERY_50;
     }
 }

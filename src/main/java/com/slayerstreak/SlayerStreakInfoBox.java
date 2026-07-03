@@ -24,7 +24,8 @@ class SlayerStreakInfoBox extends InfoBox
     public Color getTextColor()
     {
         int streak = plugin.getStreak();
-        if ((streak + 1) % 50 == 0)
+        int interval = plugin.getMilestoneInterval();
+        if ((streak + 1) % interval == 0)
         {
             return Color.RED;
         }
