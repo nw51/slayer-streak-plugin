@@ -34,6 +34,6 @@ class SlayerStreakInfoBox extends InfoBox
     @Override
     public String getTooltip()
     {
-        return "Slayer task streak: " + plugin.getStreak();
+        return "Task streak: " + plugin.getStreak();
     }
 }

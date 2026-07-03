@@ -1,13 +1,15 @@
 package com.slayerstreak;
 
-import javax.inject.Inject;
 import java.awt.image.BufferedImage;
+import com.google.inject.Provides;
+import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.widgets.Widget;
+import javax.inject.Inject;
 import net.runelite.api.Client;
-import net.runelite.api.SpriteID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.game.SpriteManager;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
@@ -21,6 +23,11 @@ public class SlayerStreakPlugin extends Plugin
 {
     private static final String SLAYER_CONFIG_GROUP = "slayer";
     private static final String STREAK_CONFIG_KEY = "streak";
+    private static final int NPC_CONTACT_GROUP_ID = 75;
+    private static final int[] SLAYER_MASTER_CHILD_IDS = { 20, 23, 26, 29, 32, 35, 38, 68 }; // all except Konar (65)
+
+    @Inject
+    private SlayerStreakConfig config;
 
     @Inject
     private Client client;
@@ -32,18 +39,23 @@ public class SlayerStreakPlugin extends Plugin
     private InfoBoxManager infoBoxManager;
 
     @Inject
-    private SpriteManager spriteManager;
+    private ItemManager itemManager;
 
     private SlayerStreakInfoBox infoBox;
     private int streak = 0;
 
+    @Provides
+    SlayerStreakConfig provideConfig(ConfigManager configManager)
+    {
+        return configManager.getConfig(SlayerStreakConfig.class);
+    }
+
     @Override
     protected void startUp()
-    {
-        streak = getCurrentStreak();
 
-        BufferedImage blankImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-        infoBox = new SlayerStreakInfoBox(blankImage, this);
+    {
+        BufferedImage cape = itemManager.getImage(9787); // Slayer cape (t)
+        infoBox = new SlayerStreakInfoBox(cape, this);
         infoBoxManager.addInfoBox(infoBox);
     }
 
@@ -56,13 +68,38 @@ public class SlayerStreakPlugin extends Plugin
 
     @Subscribe
     public void onConfigChanged(ConfigChanged event)
+
     {
+
         if (!SLAYER_CONFIG_GROUP.equals(event.getGroup()) || !STREAK_CONFIG_KEY.equals(event.getKey()))
         {
             return;
         }
 
+
         streak = getCurrentStreak();
+    }
+
+    @Subscribe
+    public void onWidgetLoaded(WidgetLoaded event)
+
+    {
+        if (event.getGroupId() != NPC_CONTACT_GROUP_ID)
+        {
+            return;
+        }
+
+        boolean nearMilestone = config.hideSlayerMasters() && (streak + 1) % 50 == 0;
+
+
+        for (int childId : SLAYER_MASTER_CHILD_IDS)
+        {
+            Widget widget = client.getWidget(NPC_CONTACT_GROUP_ID, childId);
+            if (widget != null)
+            {
+                widget.setHidden(nearMilestone);
+            }
+        }
     }
 
     private int getCurrentStreak()
