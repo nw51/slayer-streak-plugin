@@ -17,24 +17,31 @@ class SlayerStreakInfoBox extends InfoBox
     @Override
     public String getText()
     {
-        return String.valueOf(plugin.getStreak());
+        return String.valueOf(plugin.isWildernessMode() ? plugin.getWildyStreak() : plugin.getStreak());
     }
 
     @Override
     public Color getTextColor()
     {
-        int streak = plugin.getStreak();
-        int interval = plugin.getMilestoneInterval();
-        if ((streak + 1) % interval == 0)
+        if (plugin.isWildernessMode())
         {
-            return Color.RED;
+            return Color.GREEN;
         }
-        return Color.GREEN;
+
+        return plugin.isOneTaskFromMilestone() ? Color.RED : Color.GREEN;
     }
 
     @Override
     public String getTooltip()
     {
-        return "Task streak: " + plugin.getStreak();
+        if (plugin.isWildernessMode())
+        {
+            return "Wilderness task streak: " + plugin.getWildyStreak()
+                    + "</br>Slayer points: " + plugin.getPoints();
+        }
+
+        return "Task streak: " + plugin.getStreak()
+                + "</br>" + plugin.getTasksUntilNextMilestone() + " tasks until next milestone (" + plugin.getNextMilestone() + ")"
+                + "</br>Slayer points: " + plugin.getPoints();
     }
 }
