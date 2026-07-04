@@ -36,15 +36,39 @@ public interface SlayerStreakConfig extends Config
     }
 
     @ConfigItem(
-            keyName = "hideSlayerMasters",
-            name = "Restrict masters before milestone",
-            description = "Hides non-Konar Slayer Masters in NPC Contact menu and removes the ability to get a new task in-person from all masters other than Konar at your selected milestone interval.",
+            keyName = "hideNonKonarAtMilestone",
+            name = "Hide non-Konar at milestone",
+            description = "Hides non-Konar Slayer masters at chosen milestone interval.",
             section = generalSection,
             position = 1
     )
-    default boolean hideSlayerMasters()
+    default boolean hideNonKonarAtMilestone()
     {
         return true;
+    }
+
+    @ConfigItem(
+            keyName = "hideNonKonarNpcContact",
+            name = "Hide non-Konar (NPC Contact)",
+            description = "Hides non-Konar Slayer masters in NPC Contact menu at chosen milestone interval.",
+            section = generalSection,
+            position = 2
+    )
+    default boolean hideNonKonarNpcContact()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+            keyName = "highlightNonKonarAtMilestone",
+            name = "Highlight non-Konar on milestone",
+            description = "Outlines non-Konar Slayer masters in red at chosen milestone interval.",
+            section = generalSection,
+            position = 3
+    )
+    default boolean highlightNonKonarAtMilestone()
+    {
+        return false;
     }
 
     @ConfigItem(
@@ -52,7 +76,7 @@ public interface SlayerStreakConfig extends Config
             name = "Wilderness Slayer streak",
             description = "Show your wilderness slayer streak instead of your normal one (Milestone interval and restricting slayer masters options will not work with this on).",
             section = generalSection,
-            position = 2
+            position = 3
     )
     default boolean wildySlayerStreak()
     {

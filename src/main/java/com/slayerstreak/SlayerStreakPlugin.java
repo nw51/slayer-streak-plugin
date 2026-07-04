@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Set;
 import javax.inject.Inject;
 
@@ -13,11 +12,11 @@ import com.google.inject.Provides;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
-import net.runelite.api.MenuEntry;
+import net.runelite.api.NPC;
+import net.runelite.api.Renderable;
 import net.runelite.api.Skill;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetLoaded;
@@ -25,6 +24,7 @@ import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.Notifier;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.callback.Hooks;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
@@ -35,12 +35,11 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
-import net.runelite.client.util.Text;
 
 @PluginDescriptor(
         name = "Slayer Streak",
-        description = "Displays your Slayer task streak and can restrict Slayer Master interactions (includes NPC Contact) near milestones to prevent accidental streak loss. Optional Wilderness Slayer streak tracker included.",
-        tags = {"slayer", "streak", "combat", "infobox", "task", "milestone", "wilderness", "points"}
+        description = "Displays your Slayer task streak and can restrict Slayer Master interactions near milestones to prevent accidental streak loss",
+        tags = {"slayer", "streak", "combat", "infobox", "task", "milestone", "wilderness"}
 )
 public class SlayerStreakPlugin extends Plugin
 {
@@ -59,7 +58,6 @@ public class SlayerStreakPlugin extends Plugin
             "Duradel", "Kuradal",
             "Krystilia"
     );
-    private static final Set<String> BLOCKED_OPTIONS = Set.of("Talk-to", "Assignment");
 
     private static final String MILESTONE_REMINDER_TEXT = "Make sure to visit Konar for your next task!";
     private static final String STREAK_RESET_TEXT = "Your Slayer task streak has been reset to 0.";
@@ -70,6 +68,9 @@ public class SlayerStreakPlugin extends Plugin
 
     @Inject
     private ClientThread clientThread;
+
+    @Inject
+    private Hooks hooks;
 
     @Inject
     private InfoBoxManager infoBoxManager;
@@ -91,6 +92,8 @@ public class SlayerStreakPlugin extends Plugin
 
     @Inject
     private SlayerStreakConfig config;
+
+    private final Hooks.RenderableDrawListener drawListener = this::shouldDraw;
 
     private SlayerStreakInfoBox infoBox;
     private int streak = 0;
@@ -123,6 +126,7 @@ public class SlayerStreakPlugin extends Plugin
         infoboxVisible = true;
         lastActivity = Instant.now();
         overlayManager.add(overlay);
+        hooks.registerRenderableDrawListener(drawListener);
     }
 
     @Override
@@ -132,6 +136,7 @@ public class SlayerStreakPlugin extends Plugin
         infoBox = null;
         infoboxVisible = false;
         overlayManager.remove(overlay);
+        hooks.unregisterRenderableDrawListener(drawListener);
     }
 
     @Subscribe
@@ -214,7 +219,7 @@ public class SlayerStreakPlugin extends Plugin
             return;
         }
 
-        boolean hide = nearMilestone();
+        boolean hide = shouldHideNpcContact();
 
         for (int childId : SLAYER_MASTER_CHILD_IDS)
         {
@@ -226,27 +231,20 @@ public class SlayerStreakPlugin extends Plugin
         }
     }
 
-    @Subscribe
-    public void onMenuEntryAdded(MenuEntryAdded event)
+    boolean shouldDraw(Renderable renderable, boolean drawingUI)
     {
-        if (!nearMilestone())
+        if (renderable instanceof NPC)
         {
-            return;
+            NPC npc = (NPC) renderable;
+            String name = npc.getName();
+
+            if (name != null && RESTRICTED_SLAYER_MASTERS.contains(name) && shouldHideInPerson())
+            {
+                return false;
+            }
         }
 
-        if (!BLOCKED_OPTIONS.contains(event.getOption()))
-        {
-            return;
-        }
-
-        String npcName = Text.removeTags(event.getTarget());
-        if (!RESTRICTED_SLAYER_MASTERS.contains(npcName))
-        {
-            return;
-        }
-
-        MenuEntry[] entries = client.getMenuEntries();
-        client.setMenuEntries(Arrays.copyOf(entries, entries.length - 1));
+        return true;
     }
 
     private void registerActivity()
@@ -298,14 +296,14 @@ public class SlayerStreakPlugin extends Plugin
                 .build());
     }
 
-    private boolean nearMilestone()
+    private boolean shouldHideInPerson()
     {
-        if (config.wildySlayerStreak())
-        {
-            return false;
-        }
+        return !config.wildySlayerStreak() && config.hideNonKonarAtMilestone() && isOneTaskFromMilestone();
+    }
 
-        return config.hideSlayerMasters() && isOneTaskFromMilestone();
+    private boolean shouldHideNpcContact()
+    {
+        return !config.wildySlayerStreak() && config.hideNonKonarNpcContact() && isOneTaskFromMilestone();
     }
 
     boolean isOneTaskFromMilestone()

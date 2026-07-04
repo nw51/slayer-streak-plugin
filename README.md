@@ -1,6 +1,6 @@
 # Slayer Streak
 
-Tracks your Slayer task streak and points. Helps you avoid accidentally breaking a streak by warning you and
+Tracks your Slayer task streak and points. Helps you avoid accidentally losing bonus points by warning you and
 restricting interactions with Slayer Masters other than Konar (NPC contact included) as you approach a milestone.
 Also supports tracking your separate Wilderness Slayer streak.
 
@@ -14,15 +14,12 @@ Also supports tracking your separate Wilderness Slayer streak.
 
 **Milestone protection**
 - Configurable milestone interval: every 10th, 50th, 100th, or 250th task
-- Text turns red when you're one task away from your milestone, as a heads-up
+- Infobox text turns red when you're one task away from your milestone, as a heads-up
 - Chat reminder and optional desktop notification when your next task will be a
   milestone
-- Optionally hides all Slayer Masters except Konar in the NPC Contact interface near a
-  milestone, so you can't accidentally select the wrong master
-- Optionally removes the Talk-to and Assignment options from all in-person Slayer Masters
-  except Konar near a milestone (trade and other options remain
-  available)
-- Red/green outlines on nearby Slayer Masters near a milestone: red for masters to avoid,
+- Optionally hides all Slayer Masters except Konar in person and in the NPC Contact interface near a
+  milestone, so you can't accidentally select the wrong master)
+- Optional red/green outlines on nearby Slayer Masters near a milestone: red for masters to avoid,
   green for Konar
 
 **Wilderness Slayer**

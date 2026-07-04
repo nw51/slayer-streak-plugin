@@ -13,7 +13,6 @@ import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 
 class SlayerStreakOverlay extends Overlay
 {
-    private static final String KONAR_NAME = "Konar quo Maten";
     private static final String KRYSTILIA_NAME = "Krystilia";
     private static final int OUTLINE_WIDTH = 2;
     private static final int OUTLINE_FEATHER = 2;
@@ -49,7 +48,7 @@ class SlayerStreakOverlay extends Overlay
             return null;
         }
 
-        if (!plugin.isOneTaskFromMilestone())
+        if (!config.highlightNonKonarAtMilestone() || !plugin.isOneTaskFromMilestone())
         {
             return null;
         }
@@ -57,18 +56,9 @@ class SlayerStreakOverlay extends Overlay
         for (NPC npc : client.getTopLevelWorldView().npcs())
         {
             String name = npc.getName();
-            if (name == null)
-            {
-                continue;
-            }
-
-            if (SlayerStreakPlugin.RESTRICTED_SLAYER_MASTERS.contains(name))
+            if (name != null && SlayerStreakPlugin.RESTRICTED_SLAYER_MASTERS.contains(name))
             {
                 modelOutlineRenderer.drawOutline(npc, OUTLINE_WIDTH, Color.RED, OUTLINE_FEATHER);
-            }
-            else if (KONAR_NAME.equals(name))
-            {
-                modelOutlineRenderer.drawOutline(npc, OUTLINE_WIDTH, Color.GREEN, OUTLINE_FEATHER);
             }
         }
 
