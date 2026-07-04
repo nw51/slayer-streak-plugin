@@ -39,7 +39,7 @@ import net.runelite.client.util.Text;
 
 @PluginDescriptor(
         name = "Slayer Streak",
-        description = "Displays your Slayer task streak and can restrict Slayer Master interactions (includes Contact NPC) near milestones to prevent accidental streak loss. Optional Wilderness Slayer streak tracker included.",
+        description = "Displays your Slayer task streak and can restrict Slayer Master interactions (includes NPC Contact) near milestones to prevent accidental streak loss. Optional Wilderness Slayer streak tracker included.",
         tags = {"slayer", "streak", "combat", "infobox", "task", "milestone", "wilderness", "points"}
 )
 public class SlayerStreakPlugin extends Plugin
