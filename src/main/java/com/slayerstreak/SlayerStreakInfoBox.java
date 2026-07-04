@@ -31,17 +31,20 @@ class SlayerStreakInfoBox extends InfoBox
         return plugin.isOneTaskFromMilestone() ? Color.RED : Color.GREEN;
     }
 
+    private static final String LABEL = "<col=ffff00>";
+    private static final String VALUE = "<col=ffffff>";
+
     @Override
     public String getTooltip()
     {
         if (plugin.isWildernessMode())
         {
-            return "Wilderness task streak: " + plugin.getWildyStreak()
-                    + "</br>Slayer points: " + plugin.getPoints();
+            return LABEL + "Wilderness Streak: " + VALUE + plugin.getWildyStreak()
+                    + "</br>" + LABEL + "Points: " + VALUE + plugin.getPoints();
         }
 
-        return "Task streak: " + plugin.getStreak()
-                + "</br>" + plugin.getTasksUntilNextMilestone() + " tasks until next milestone (" + plugin.getNextMilestone() + ")"
-                + "</br>Slayer points: " + plugin.getPoints();
+        return LABEL + "Streak: " + VALUE + plugin.getStreak()
+                + "</br>" + LABEL + "Next milestone: " + VALUE + plugin.getNextMilestone() + " (" + plugin.getTasksUntilNextMilestone() + ")"
+                + "</br>" + LABEL + "Points: " + VALUE + plugin.getPoints();
     }
 }
