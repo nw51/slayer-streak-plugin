@@ -1,5 +1,6 @@
 package com.slayerstreak;
 
+import net.runelite.client.util.Text;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.time.Duration;
@@ -9,6 +10,8 @@ import javax.inject.Inject;
 
 import com.google.inject.Provides;
 
+import java.util.regex.Pattern;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -63,6 +66,10 @@ public class SlayerStreakPlugin extends Plugin
     private static final String STREAK_RESET_TEXT = "Your Slayer task streak has been reset to 0.";
     private static final Duration RESET_MESSAGE_COOLDOWN = Duration.ofHours(24);
 
+    // -- Task-check chat detection (patterns from RuneLite's core Slayer plugin) --
+    private static final Pattern TASK_CHECK_PATTERN = Pattern.compile("^(?:You're assigned to kill|You have received a new Slayer assignment from .*:) (?:[Tt]he )?(?<name>.+?)(?: (?:in|on|south of) (?:the )?(?<location>[^;]+))?(?:; only | \\()(?<amount>\\d+)(?: more to go\\.|\\))$");
+    private static final String TASK_CHECK_COMPLETE_MESSAGE = "You need something new to hunt.";
+
     @Inject
     private Client client;
 
@@ -99,6 +106,7 @@ public class SlayerStreakPlugin extends Plugin
     private int streak = 0;
     private int wildyStreak = 0;
     private int points = 0;
+    private int cachedXp = -1;
 
     private boolean infoboxVisible = false;
     private Instant lastActivity;
@@ -118,13 +126,15 @@ public class SlayerStreakPlugin extends Plugin
             streak = client.getVarbitValue(VarbitID.SLAYER_TASKS_COMPLETED);
             wildyStreak = client.getVarbitValue(VarbitID.SLAYER_WILDERNESS_TASKS_COMPLETED);
             points = client.getVarbitValue(VarbitID.SLAYER_POINTS);
+
+            if (client.getGameState() == GameState.LOGGED_IN)
+            {
+                cachedXp = client.getSkillExperience(Skill.SLAYER);
+            }
         });
 
         BufferedImage cape = itemManager.getImage(9787); // Slayer cape (t)
         infoBox = new SlayerStreakInfoBox(cape, this);
-        infoBoxManager.addInfoBox(infoBox);
-        infoboxVisible = true;
-        lastActivity = Instant.now();
         overlayManager.add(overlay);
         hooks.registerRenderableDrawListener(drawListener);
     }
@@ -137,17 +147,25 @@ public class SlayerStreakPlugin extends Plugin
         infoboxVisible = false;
         overlayManager.remove(overlay);
         hooks.unregisterRenderableDrawListener(drawListener);
+        cachedXp = -1;
     }
 
     @Subscribe
     public void onGameStateChanged(GameStateChanged event)
     {
-        if (event.getGameState() == GameState.LOGGED_IN)
+        switch (event.getGameState())
         {
-            streak = client.getVarbitValue(VarbitID.SLAYER_TASKS_COMPLETED);
-            wildyStreak = client.getVarbitValue(VarbitID.SLAYER_WILDERNESS_TASKS_COMPLETED);
-            points = client.getVarbitValue(VarbitID.SLAYER_POINTS);
-            registerActivity();
+            case HOPPING:
+            case LOGGING_IN:
+                cachedXp = -1;
+                break;
+            case LOGGED_IN:
+                streak = client.getVarbitValue(VarbitID.SLAYER_TASKS_COMPLETED);
+                wildyStreak = client.getVarbitValue(VarbitID.SLAYER_WILDERNESS_TASKS_COMPLETED);
+                points = client.getVarbitValue(VarbitID.SLAYER_POINTS);
+                break;
+            default:
+                break;
         }
     }
 
@@ -160,38 +178,71 @@ public class SlayerStreakPlugin extends Plugin
         {
             int newStreak = client.getVarbitValue(VarbitID.SLAYER_TASKS_COMPLETED);
 
-            if (streak > 0 && newStreak == 0)
+            // Only react to genuine mid-session changes, not the login sync (guarded by cachedXp).
+            if (cachedXp != -1)
             {
-                announceStreakReset();
+                if (streak > 0 && newStreak == 0)
+                {
+                    announceStreakReset();
+                }
+
+                streak = newStreak;
+                registerActivity();
+
+                if (!config.wildySlayerStreak() && isOneTaskFromMilestone())
+                {
+                    sendMilestoneReminder();
+                }
             }
-
-            streak = newStreak;
-            registerActivity();
-
-            if (!config.wildySlayerStreak() && isOneTaskFromMilestone())
+            else
             {
-                sendMilestoneReminder();
+                streak = newStreak;
             }
         }
         else if (varbitId == VarbitID.SLAYER_WILDERNESS_TASKS_COMPLETED)
         {
             wildyStreak = client.getVarbitValue(VarbitID.SLAYER_WILDERNESS_TASKS_COMPLETED);
-            registerActivity();
+
+            if (cachedXp != -1)
+            {
+                registerActivity();
+            }
         }
         else if (varbitId == VarbitID.SLAYER_POINTS)
         {
             points = client.getVarbitValue(VarbitID.SLAYER_POINTS);
-            registerActivity();
+
+            if (cachedXp != -1)
+            {
+                registerActivity();
+            }
         }
     }
 
     @Subscribe
     public void onStatChanged(StatChanged event)
     {
-        if (event.getSkill() == Skill.SLAYER)
+        if (event.getSkill() != Skill.SLAYER)
         {
-            registerActivity();
+            return;
         }
+
+        int slayerExp = event.getXp();
+
+        if (slayerExp <= cachedXp)
+        {
+            return;
+        }
+
+        if (cachedXp == -1)
+        {
+            // this is the initial xp sent on login
+            cachedXp = slayerExp;
+            return;
+        }
+
+        cachedXp = slayerExp;
+        registerActivity();
     }
 
     @Subscribe
@@ -208,6 +259,22 @@ public class SlayerStreakPlugin extends Plugin
         {
             infoBoxManager.removeInfoBox(infoBox);
             infoboxVisible = false;
+        }
+    }
+
+    @Subscribe
+    public void onChatMessage(ChatMessage event)
+    {
+        if (event.getType() != ChatMessageType.GAMEMESSAGE && event.getType() != ChatMessageType.SPAM)
+        {
+            return;
+        }
+
+        String message = Text.removeTags(event.getMessage());
+
+        if (message.equals(TASK_CHECK_COMPLETE_MESSAGE) || TASK_CHECK_PATTERN.matcher(message).find())
+        {
+            registerActivity();
         }
     }
 
