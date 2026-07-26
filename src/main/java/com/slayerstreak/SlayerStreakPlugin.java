@@ -1,5 +1,8 @@
 package com.slayerstreak;
 
+import java.util.Arrays;
+import net.runelite.api.MenuEntry;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.client.util.Text;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -148,6 +151,28 @@ public class SlayerStreakPlugin extends Plugin
         overlayManager.remove(overlay);
         hooks.unregisterRenderableDrawListener(drawListener);
         cachedXp = -1;
+    }
+
+    @Subscribe
+    public void onMenuEntryAdded(MenuEntryAdded event)
+    {
+        if (!shouldHideNpcContact())
+        {
+            return;
+        }
+
+        if (!"NPC Contact".equals(Text.removeTags(event.getTarget())))
+        {
+            return;
+        }
+
+        if (!RESTRICTED_SLAYER_MASTERS.contains(event.getOption()))
+        {
+            return;
+        }
+
+        MenuEntry[] entries = client.getMenuEntries();
+        client.setMenuEntries(Arrays.copyOf(entries, entries.length - 1));
     }
 
     @Subscribe
