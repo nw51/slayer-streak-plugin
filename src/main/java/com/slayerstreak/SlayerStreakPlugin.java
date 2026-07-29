@@ -51,7 +51,8 @@ public class SlayerStreakPlugin extends Plugin
 {
     // -- NPC Contact interface --
     private static final int NPC_CONTACT_GROUP_ID = 75;
-    private static final int[] SLAYER_MASTER_CHILD_IDS = { 20, 23, 26, 29, 32, 35, 38, 68 }; // all except Konar (65)
+    private static final int NPC_CONTACT_SCROLL_LAYER_CHILD = 4;
+    private static final int[] SLAYER_MASTER_CHILD_IDS = { 5, 6, 7, 8, 9, 10, 11, 12 }; // array positions in 75.4 dynamic children; Konar (13) excluded
 
     // -- In-person slayer masters (includes alternate forms each master can appear as) --
     static final Set<String> RESTRICTED_SLAYER_MASTERS = Set.of(
@@ -161,7 +162,7 @@ public class SlayerStreakPlugin extends Plugin
             return;
         }
 
-        if (!"NPC Contact".equals(Text.removeTags(event.getTarget())))
+        if (!"Astral Contact".equals(Text.removeTags(event.getTarget())))
         {
             return;
         }
@@ -313,14 +314,28 @@ public class SlayerStreakPlugin extends Plugin
 
         boolean hide = shouldHideNpcContact();
 
-        for (int childId : SLAYER_MASTER_CHILD_IDS)
+        clientThread.invokeLater(() ->
         {
-            Widget widget = client.getWidget(NPC_CONTACT_GROUP_ID, childId);
-            if (widget != null)
+            Widget scrollLayer = client.getWidget(NPC_CONTACT_GROUP_ID, NPC_CONTACT_SCROLL_LAYER_CHILD);
+            if (scrollLayer == null)
             {
-                widget.setHidden(hide);
+                return;
             }
-        }
+
+            Widget[] children = scrollLayer.getDynamicChildren();
+            if (children == null)
+            {
+                return;
+            }
+
+            for (int index : SLAYER_MASTER_CHILD_IDS)
+            {
+                if (index < children.length && children[index] != null)
+                {
+                    children[index].setHidden(hide);
+                }
+            }
+        });
     }
 
     boolean shouldDraw(Renderable renderable, boolean drawingUI)
